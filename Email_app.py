@@ -86,15 +86,15 @@ class Ui_Dialog(object):
 
         # Left QListWidget for subjects and senders
         self.listWidget = QtWidgets.QListWidget(Dialog)
-        self.listWidget.setGeometry(QtCore.QRect(0, 0, 201, 301))
+        self.listWidget.setGeometry(QtCore.QRect(0, 0, 100, 100))
         self.listWidget.setObjectName("listWidget")
         self.listWidget.itemClicked.connect(self.on_item_clicked)
-        self.listWidget.resize(600,400)
+        self.listWidget.resize(800,400)
         # Right QListWidget for email content
         self.listWidget_2 = QtWidgets.QListWidget(Dialog)
-        self.listWidget_2.setGeometry(QtCore.QRect(400, 0, 201, 301))
+        self.listWidget_2.setGeometry(QtCore.QRect(0, 400, 800, 200))
         self.listWidget_2.setObjectName("listWidget_2")
-        self.listWidget_2.resize(600,400)
+        self.listWidget_2.resize(800,200)
 
         # Populate the left list with subject and sender
         self.populate_left_list()
