@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*- 
-
 import imaplib, email
 import os
 from email.header import decode_header
@@ -50,6 +48,30 @@ def download_attachment(part):
             filepath = os.path.join(folder_name, filename)
             open(filepath, "wb").write(part.get_payload(decode=True))
 
+def extract_body(msg):
+    # Function to extract the email body (handling both text/plain and text/html)
+    body = ""
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type()
+            content_disposition = str(part.get("Content-Disposition"))
+            
+            # If the part is plain text or html, extract the body
+            try:
+                if content_type == "text/plain" and "attachment" not in content_disposition:
+                    body = part.get_payload(decode=True).decode()
+                    break  # We stop once we find the plain text body
+                elif content_type == "text/html" and "attachment" not in content_disposition:
+                    body = part.get_payload(decode=True).decode()
+                    break  # We stop once we find the html body
+            except:
+                continue
+    else:
+        # For non-multipart emails, directly extract the body
+        body = msg.get_payload(decode=True).decode()
+
+    return body
+
 # Fetch emails and store details
 for i in range(numOfMessages, numOfMessages - 100, -1):
     try:
@@ -58,45 +80,21 @@ for i in range(numOfMessages, numOfMessages - 100, -1):
             if isinstance(response, tuple):
                 msg = email.message_from_bytes(response[1])
                 subject, From = obtain_header(msg)
-
-                var_x = None  # Initialize var_x to None
-
-                # Check if the email is multipart
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        content_type = part.get_content_type()
-                        content_disposition = str(part.get("Content-Disposition"))
-
-                        # Extract body content
-                        try:
-                            body = part.get_payload(decode=True).decode()
-                        except:
-                            body = None  # Handle case if decoding fails
-
-                        # If the part is plain text and not an attachment
-                        if content_type == "text/plain" and "attachment" not in content_disposition:
-                            var_x = body
-                        elif "attachment" in content_disposition:
-                            download_attachment(part)
-
-                else:
-                    # If email is not multipart, extract the body directly
-                    content_type = msg.get_content_type()
-                    try:
-                        body = msg.get_payload(decode=True).decode()
-                    except:
-                        body = None  # Handle case if decoding fails
-                    if content_type == "text/plain":
-                        var_x = body
-
-                if var_x:
-                    y.append((subject, From, var_x))  # Store subject, sender, and body as a tuple
+                
+                # Extract the body content
+                body = extract_body(msg)
+                if body:
+                    y.append((subject, From, body))  # Store subject, sender, and body as a tuple
     except TypeError:
         pass
 imap.close()
 
 # PyQt5 GUI
 class Ui_MainWindow(QMainWindow):
+    
+    def __init__(self):
+        super().__init__()
+        self.star_status = False  # Track whether the email is starred or not
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -206,6 +204,13 @@ class Ui_MainWindow(QMainWindow):
         self.backButton.move(0,0)
         self.backButton.setIcon(QIcon("back_arrow.png"))
 
+        # Starred Button
+        self.starredButton = QtWidgets.QPushButton("", self.emailContentWidget)
+        self.starredButton.clicked.connect(self.change_star)
+        self.starredButton.setVisible(False)
+        self.starredButton.move(100, 0)
+        self.update_star_icon()
+
         # Scroll Area for email content
         self.scrollArea = QtWidgets.QScrollArea(self.emailContentWidget)
         self.scrollArea.setWidgetResizable(True)  # Make it resizable
@@ -237,6 +242,21 @@ class Ui_MainWindow(QMainWindow):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        
+    def change_star(self):
+        # Toggle the star status
+        self.star_status = not self.star_status
+
+        # Update the icon based on the new status
+        self.update_star_icon()
+
+    def update_star_icon(self):
+        if self.star_status:
+            # Set "star_on" icon if the email is starred
+            self.starredButton.setIcon(QIcon("star_on.png"))
+        else:
+            # Set "star_off" icon if the email is not starred
+            self.starredButton.setIcon(QIcon("star_off.png"))
 
     def populate_left_list(self):
         _translate = QtCore.QCoreApplication.translate
@@ -258,7 +278,7 @@ class Ui_MainWindow(QMainWindow):
         
         # Show the "Back" button and email content
         self.backButton.setVisible(True)
-
+        self.starredButton.setVisible(True)
         # Switch to the email content view
         self.stacked_layout.setCurrentIndex(1)
 
@@ -266,6 +286,7 @@ class Ui_MainWindow(QMainWindow):
         # Hide the "Back" button and switch back to the list view
         self.backButton.setVisible(False)
         self.stacked_layout.setCurrentIndex(0)
+        self.starredButton.setVisible(False)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
