@@ -1,0 +1,115 @@
+/* General Body Style */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    background-color: #f4f6f9;
+    height: 100vh;
+}
+
+/* Sidebar Style */
+.sidebar {
+    width: 250px;
+    height: 100%;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: white;
+    position: fixed;
+    padding-top: 30px;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Buttons */
+.sidebar button {
+    width: 100%;
+    padding: 15px;
+    background-color: #34495e;
+    color: white;
+    font-size: 16px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #7f8c8d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+/* Hover effect for buttons */
+.sidebar button:hover {
+    background-color: #2980b9;
+    padding-left: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Active button style */
+.sidebar button.active {
+    background-color: #1abc9c;
+    color: white;
+}
+
+/* Content Area Style */
+.content {
+    margin-left: 250px;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+/* Header Style in Content Area */
+.content h1 {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+/* Paragraph Style in Content Area */
+.content p {
+    font-size: 1rem;
+    color: #34495e;
+    line-height: 1.6;
+    max-width: 800px;
+}
+
+/* Responsive Sidebar */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+
+    .content {
+        margin-left: 200px;
+    }
+
+    .sidebar button {
+        padding: 12px;
+    }
+
+    .content h1 {
+        font-size: 1.6rem;
+    }
+}
+
+/* Responsive Content */
+@media (max-width: 480px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding-top: 15px;
+        box-shadow: none;
+    }
+
+    .content {
+        margin-left: 0;
+        padding: 15px;
+    }
+
+    .sidebar button {
+        padding: 10px;
+    }
+
+    .content h1 {
+        font-size: 1.4rem;
+    }
+}
