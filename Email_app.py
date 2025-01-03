@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QMenu, QAction, QMainWindow
 
 # Initialize IMAP connection
 imap = imaplib.IMAP4_SSL("imap.gmail.com")
-imap.login('alexeyplagov@gmail.com', 'myjf xtbg oqkl pecj')
+imap.login('alexeyplagov@gmail.com', 'lmas fwyf pgij mlzu')
 
 # Select the inbox
 status, messages = imap.select("INBOX")
@@ -56,25 +56,38 @@ for i in range(numOfMessages, numOfMessages - 100, -1):
                 msg = email.message_from_bytes(response[1])
                 subject, From = obtain_header(msg)
 
+                var_x = None  # Initialize var_x to None
+
+                # Check if the email is multipart
                 if msg.is_multipart():
                     for part in msg.walk():
                         content_type = part.get_content_type()
                         content_disposition = str(part.get("Content-Disposition"))
+
+                        # Extract body content
                         try:
                             body = part.get_payload(decode=True).decode()
                         except:
-                            pass
+                            body = None  # Handle case if decoding fails
+
+                        # If the part is plain text and not an attachment
                         if content_type == "text/plain" and "attachment" not in content_disposition:
                             var_x = body
                         elif "attachment" in content_disposition:
                             download_attachment(part)
+
                 else:
+                    # If email is not multipart, extract the body directly
                     content_type = msg.get_content_type()
-                    body = msg.get_payload(decode=True).decode()
+                    try:
+                        body = msg.get_payload(decode=True).decode()
+                    except:
+                        body = None  # Handle case if decoding fails
                     if content_type == "text/plain":
                         var_x = body
 
-                y.append(var_x)  # Store email body
+                if var_x:
+                    y.append((subject, From, var_x))  # Store subject, sender, and body as a tuple
     except TypeError:
         pass
 imap.close()
@@ -175,6 +188,7 @@ class Ui_MainWindow(QMainWindow):
         self.listWidget.setObjectName("listWidget")
         self.listWidget.itemClicked.connect(self.on_item_clicked)
         self.listWidget.resize(800, 600)
+        
         # Right QListWidget for email content
         self.listWidget_2 = QtWidgets.QListWidget(central_widget)
         self.listWidget_2.setGeometry(QtCore.QRect(200, 0, 100, 100))
@@ -185,9 +199,6 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout = QtWidgets.QStackedLayout()
         self.stacked_layout.addWidget(self.listWidget)
         self.stacked_layout.addWidget(self.listWidget_2)
-
-        
-
 
         # Populate the left list with subject and sender
         self.populate_left_list()
@@ -204,14 +215,16 @@ class Ui_MainWindow(QMainWindow):
 
     def on_item_clicked(self, item):
         # Get index of selected item
-        index = self.listWidget_2.row(item)
+        index = self.listWidget.row(item)  # Changed to self.listWidget.row() to match clicked item
 
-        # Get the corresponding email content
-        email_content = y[index]
+        # Get the corresponding email content (subject, sender, body)
+        subject, sender, email_content = y[index-1]
 
         # Display the email content in the right QListWidget
         self.listWidget_2.clear()
-        self.listWidget_2.addItem(email_content)
+        self.listWidget_2.addItem(f"Subject: {subject}")
+        self.listWidget_2.addItem(f"From: {sender}")
+        self.listWidget_2.addItem(f"\n{email_content}")  # Display the body content
         self.stacked_layout.setCurrentIndex(1)
 
     def retranslateUi(self, MainWindow):
