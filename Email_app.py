@@ -6,6 +6,9 @@ from email.header import decode_header
 import webbrowser
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMenu, QAction, QMainWindow
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 # Initialize IMAP connection
 imap = imaplib.IMAP4_SSL("imap.gmail.com")
@@ -189,16 +192,45 @@ class Ui_MainWindow(QMainWindow):
         self.listWidget.itemClicked.connect(self.on_item_clicked)
         self.listWidget.resize(800, 600)
         
-        # Right QListWidget for email content
-        self.listWidget_2 = QtWidgets.QListWidget(central_widget)
-        self.listWidget_2.setGeometry(QtCore.QRect(200, 0, 100, 100))
-        self.listWidget_2.setObjectName("listWidget_2")
-        self.listWidget_2.resize(800, 600)
+        # Right QWidget for email content (includes Back button)
+        self.emailContentWidget = QtWidgets.QWidget(central_widget)
+        self.emailContentWidget.setGeometry(QtCore.QRect(200, 0, 800, 600))
+        
+        # Layout for email content display
+        self.emailContentLayout = QtWidgets.QVBoxLayout(self.emailContentWidget)
+        
+        # Back Button (hidden initially)
+        self.backButton = QtWidgets.QPushButton("Back", self.emailContentWidget)
+        self.backButton.clicked.connect(self.show_email_list)
+        self.backButton.setVisible(False)  # Initially hidden
+        self.backButton.move(0,0)
+        self.backButton.setIcon(QIcon("back_arrow.png"))
+
+        # Scroll Area for email content
+        self.scrollArea = QtWidgets.QScrollArea(self.emailContentWidget)
+        self.scrollArea.setWidgetResizable(True)  # Make it resizable
+        self.scrollArea.setWidget(QtWidgets.QWidget())  # Add a QWidget inside the scroll area
+        self.scrollArea.setGeometry(QtCore.QRect(0, 30, 800, 560))  # Add margin for other widgets
+        
+        # Layout for content inside the scroll area
+        self.scrollLayout = QtWidgets.QVBoxLayout(self.scrollArea.widget())
+        
+        # Label for email subject and sender
+        self.subjectLabel = QtWidgets.QLabel(self.scrollArea.widget())
+        self.subjectLabel.setWordWrap(True)  # Enable word wrapping for long subjects
+        self.subjectLabel.setAlignment(QtCore.Qt.AlignTop)  # Align to the top
+        self.scrollLayout.addWidget(self.subjectLabel)
+        
+        # Label for email body content
+        self.bodyLabel = QtWidgets.QLabel(self.scrollArea.widget())
+        self.bodyLabel.setWordWrap(True)  # Enable word wrapping for long bodies
+        self.bodyLabel.setAlignment(QtCore.Qt.AlignTop)  # Align to the top
+        self.scrollLayout.addWidget(self.bodyLabel)
 
         # Stack Lists
         self.stacked_layout = QtWidgets.QStackedLayout()
         self.stacked_layout.addWidget(self.listWidget)
-        self.stacked_layout.addWidget(self.listWidget_2)
+        self.stacked_layout.addWidget(self.emailContentWidget)
 
         # Populate the left list with subject and sender
         self.populate_left_list()
@@ -215,17 +247,25 @@ class Ui_MainWindow(QMainWindow):
 
     def on_item_clicked(self, item):
         # Get index of selected item
-        index = self.listWidget.row(item)  # Changed to self.listWidget.row() to match clicked item
+        index = self.listWidget.row(item)  # Use the correct index for the item clicked
 
         # Get the corresponding email content (subject, sender, body)
-        subject, sender, email_content = y[index-1]
+        subject, sender, email_content = y[index]  # Use the index directly without subtracting 1
 
-        # Display the email content in the right QListWidget
-        self.listWidget_2.clear()
-        self.listWidget_2.addItem(f"Subject: {subject}")
-        self.listWidget_2.addItem(f"From: {sender}")
-        self.listWidget_2.addItem(f"\n{email_content}")  # Display the body content
+        # Display the email content in the right QWidget
+        self.subjectLabel.setText(f"Subject: {subject}")
+        self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
+        
+        # Show the "Back" button and email content
+        self.backButton.setVisible(True)
+
+        # Switch to the email content view
         self.stacked_layout.setCurrentIndex(1)
+
+    def show_email_list(self):
+        # Hide the "Back" button and switch back to the list view
+        self.backButton.setVisible(False)
+        self.stacked_layout.setCurrentIndex(0)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
