@@ -1,101 +1,23 @@
-import imaplib, email
+import IMAP4_prot
 import os
-from email.header import decode_header
 import webbrowser
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMenu, QAction, QMainWindow
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+os.system('python IMAP4_prot.py')
+y = IMAP4_prot.return_y()
+z = IMAP4_prot.return_z()
+star_list = []  # To hold starred emails
+zz = [1]
 
-# Initialize IMAP connection
-imap = imaplib.IMAP4_SSL("imap.gmail.com")
-imap.login('alexeyplagov@gmail.com', 'lmas fwyf pgij mlzu')
-
-# Select the inbox
-status, messages = imap.select("INBOX")
-numOfMessages = int(messages[0])
-
-z = []  # List for storing subject and sender info
-y = []  # List for storing email body content
-
-def clean(text):
-    # Clean text for creating a folder
-    return "".join(c if c.isalnum() else "_" for c in text)
-
-def obtain_header(msg):
-    # Decode the email subject
-    subject, encoding = decode_header(msg["Subject"])[0]
-    if isinstance(subject, bytes):
-        subject = subject.decode(encoding)
-
-    # Decode email sender
-    From, encoding = decode_header(msg.get("From"))[0]
-    if isinstance(From, bytes):
-        From = From.decode(encoding)
-
-    # Store subject and sender in z list
-    z.append([subject, From])
-    return subject, From
-
-def download_attachment(part):
-    # Download email attachment
-    filename = part.get_filename()
-    if filename:
-        folder_name = clean(subject)
-        if not os.path.isdir(folder_name):
-            os.mkdir(folder_name)
-            filepath = os.path.join(folder_name, filename)
-            open(filepath, "wb").write(part.get_payload(decode=True))
-
-def extract_body(msg):
-    # Function to extract the email body (handling both text/plain and text/html)
-    body = ""
-    if msg.is_multipart():
-        for part in msg.walk():
-            content_type = part.get_content_type()
-            content_disposition = str(part.get("Content-Disposition"))
-            
-            # If the part is plain text or html, extract the body
-            try:
-                if content_type == "text/plain" and "attachment" not in content_disposition:
-                    body = part.get_payload(decode=True).decode()
-                    break  # We stop once we find the plain text body
-                elif content_type == "text/html" and "attachment" not in content_disposition:
-                    body = part.get_payload(decode=True).decode()
-                    break  # We stop once we find the html body
-            except:
-                continue
-    else:
-        # For non-multipart emails, directly extract the body
-        body = msg.get_payload(decode=True).decode()
-
-    return body
-
-# Fetch emails and store details
-for i in range(numOfMessages, numOfMessages - 100, -1):
-    try:
-        res, msg = imap.fetch(str(i), "(RFC822)")  # Fetch the email using its ID
-        for response in msg:
-            if isinstance(response, tuple):
-                msg = email.message_from_bytes(response[1])
-                subject, From = obtain_header(msg)
-                
-                # Extract the body content
-                body = extract_body(msg)
-                if body:
-                    y.append((subject, From, body))  # Store subject, sender, and body as a tuple
-    except TypeError:
-        pass
-imap.close()
-
-# PyQt5 GUI
 class Ui_MainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.star_status = False  # Track whether the email is starred or not
-
+          # Track whether the email is starred or not
+        self.star_status = False
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1000, 625)
@@ -139,9 +61,10 @@ class Ui_MainWindow(QMainWindow):
         inboxButton.resize(200, 60)
 
         # Starred button
-        starButton = QtWidgets.QPushButton("Starred", central_widget)
-        starButton.move(0, 60)
-        starButton.resize(200, 60)
+        self.starButton = QtWidgets.QPushButton("Starred", central_widget)
+        self.starButton.move(0, 60)
+        self.starButton.resize(200, 60)
+        self.starButton.clicked.connect(self.show_starred_page)
 
         # Snoozed button
         snoozedButton = QtWidgets.QPushButton("Snoozed", central_widget)
@@ -196,13 +119,20 @@ class Ui_MainWindow(QMainWindow):
         
         # Layout for email content display
         self.emailContentLayout = QtWidgets.QVBoxLayout(self.emailContentWidget)
-        
+
+        #QWidget for Starred Email subjects and senders
+        self.listWidget_star = QtWidgets.QListWidget(central_widget)
+        self.listWidget_star.setGeometry(QtCore.QRect(200, 0, 100, 100))
+        self.listWidget_star.setObjectName("listWidget_star")
+        self.listWidget_star.itemClicked.connect(self.on_item_clicked)
+        self.listWidget_star.resize(800, 600)
+
         # Back Button (hidden initially)
         self.backButton = QtWidgets.QPushButton("Back", self.emailContentWidget)
         self.backButton.clicked.connect(self.show_email_list)
         self.backButton.setVisible(False)  # Initially hidden
         self.backButton.move(0,0)
-        self.backButton.setIcon(QIcon("back_arrow.png"))
+        self.backButton.setIcon(QIcon("images/back_arrow.png"))
 
         # Starred Button
         self.starredButton = QtWidgets.QPushButton("", self.emailContentWidget)
@@ -236,6 +166,7 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout = QtWidgets.QStackedLayout()
         self.stacked_layout.addWidget(self.listWidget)
         self.stacked_layout.addWidget(self.emailContentWidget)
+        self.stacked_layout.addWidget(self.listWidget_star)
 
         # Populate the left list with subject and sender
         self.populate_left_list()
@@ -246,17 +177,26 @@ class Ui_MainWindow(QMainWindow):
     def change_star(self):
         # Toggle the star status
         self.star_status = not self.star_status
-
         # Update the icon based on the new status
         self.update_star_icon()
+        self.edit_star_list(zz)
+    
+    def edit_star_list(self, zz):
+        index = zz  # Use the correct index for the item clicked
+
+        # Get the corresponding email content (subject, sender, body)
+
+        if index not in star_list:
+            star_list.append(index[0])
+        else:
+            star_list.remove(index[0])
 
     def update_star_icon(self):
+        print(self.star_status, "<----")
         if self.star_status:
-            # Set "star_on" icon if the email is starred
-            self.starredButton.setIcon(QIcon("star_on.png"))
+            self.starredButton.setIcon(QIcon("images/star_on.png"))
         else:
-            # Set "star_off" icon if the email is not starred
-            self.starredButton.setIcon(QIcon("star_off.png"))
+            self.starredButton.setIcon(QIcon("images/star_off.png"))
 
     def populate_left_list(self):
         _translate = QtCore.QCoreApplication.translate
@@ -265,13 +205,39 @@ class Ui_MainWindow(QMainWindow):
             item.setText(_translate("MainWindow", f"{z[i][0]}\n{z[i][1]}"))
             self.listWidget.addItem(item)
 
+    def populate_starred_list(self):
+        print(f"{star_list[0][0]}\n{star_list[0][1]}")  # Debugging line to print first item
+        self.listWidget_star.clear()  # Clear the list before repopulating
+        _translate = QtCore.QCoreApplication.translate
+    
+        # Iterate directly over star_list
+        for item_data in star_list:
+            item = QtWidgets.QListWidgetItem()
+            # item_data is a tuple, so access its first and second elements (subject, sender)
+            item.setText(_translate("MainWindow", f"{item_data[0]}\n{item_data[1]}"))
+            self.listWidget_star.addItem(item)
+
+
+    def show_starred_page(self):
+        self.populate_starred_list()
+        self.stacked_layout.setCurrentIndex(2)  # Switch to the Starred page
+    
     def on_item_clicked(self, item):
-        # Get index of selected item
         index = self.listWidget.row(item)  # Use the correct index for the item clicked
 
         # Get the corresponding email content (subject, sender, body)
         subject, sender, email_content = y[index]  # Use the index directly without subtracting 1
-
+        zz[0] = y[index]
+        print(zz[0])
+        print(star_list)
+        if zz[0] not in star_list:
+            self.star_status = False
+            self.update_star_icon()
+            print("false")
+        else:
+            self.star_status = True
+            self.update_star_icon()
+            print("true")
         # Display the email content in the right QWidget
         self.subjectLabel.setText(f"Subject: {subject}")
         self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
@@ -281,12 +247,14 @@ class Ui_MainWindow(QMainWindow):
         self.starredButton.setVisible(True)
         # Switch to the email content view
         self.stacked_layout.setCurrentIndex(1)
+        return zz
 
     def show_email_list(self):
         # Hide the "Back" button and switch back to the list view
         self.backButton.setVisible(False)
         self.stacked_layout.setCurrentIndex(0)
         self.starredButton.setVisible(False)
+        self.update_star_icon()
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
