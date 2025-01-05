@@ -9,8 +9,10 @@ from PyQt5.QtCore import *
 os.system('python IMAP4_prot.py')
 y = IMAP4_prot.return_y()
 z = IMAP4_prot.return_z()
+
 star_list = []  # To hold starred emails
 zz = [1]
+index = 0
 
 class Ui_MainWindow(QMainWindow):
     
@@ -59,7 +61,7 @@ class Ui_MainWindow(QMainWindow):
         inboxButton = QtWidgets.QPushButton("Inbox", central_widget)
         inboxButton.move(0, 0)
         inboxButton.resize(200, 60)
-
+        inboxButton.clicked.connect(self.inbox_return)
         # Starred button
         self.starButton = QtWidgets.QPushButton("Starred", central_widget)
         self.starButton.move(0, 60)
@@ -175,21 +177,23 @@ class Ui_MainWindow(QMainWindow):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         
     def change_star(self):
+        self.edit_star_list(zz)
         # Toggle the star status
-        self.star_status = not self.star_status
+        self.star_status = not y[index][3]
+        y[index][3] = not y[index][3]
         # Update the icon based on the new status
         self.update_star_icon()
-        self.edit_star_list(zz)
+        
     
     def edit_star_list(self, zz):
-        index = zz  # Use the correct index for the item clicked
+          # Use the correct index for the item clicked
 
         # Get the corresponding email content (subject, sender, body)
-
-        if index not in star_list:
-            star_list.append(index[0])
+        print(y[index][3])
+        if y[index][3] == False:
+            star_list.append(y[0])
         else:
-            star_list.remove(index[0])
+            star_list.remove(y[0])
 
     def update_star_icon(self):
         print(self.star_status, "<----")
@@ -204,9 +208,11 @@ class Ui_MainWindow(QMainWindow):
             item = QtWidgets.QListWidgetItem()
             item.setText(_translate("MainWindow", f"{z[i][0]}\n{z[i][1]}"))
             self.listWidget.addItem(item)
-
+    def inbox_return(self):
+        self.stacked_layout.setCurrentIndex(0)
     def populate_starred_list(self):
-        print(f"{star_list[0][0]}\n{star_list[0][1]}")  # Debugging line to print first item
+        
+        #print(f"{star_list[0][0]}\n{star_list[0][1]}")  # Debugging line to print first item
         self.listWidget_star.clear()  # Clear the list before repopulating
         _translate = QtCore.QCoreApplication.translate
     
@@ -214,7 +220,10 @@ class Ui_MainWindow(QMainWindow):
         for item_data in star_list:
             item = QtWidgets.QListWidgetItem()
             # item_data is a tuple, so access its first and second elements (subject, sender)
-            item.setText(_translate("MainWindow", f"{item_data[0]}\n{item_data[1]}"))
+            try:
+                item.setText(_translate("MainWindow", f"{item_data[0]}\n{item_data[1]}"))
+            except IndexError:
+                item.clear()
             self.listWidget_star.addItem(item)
 
 
@@ -226,18 +235,12 @@ class Ui_MainWindow(QMainWindow):
         index = self.listWidget.row(item)  # Use the correct index for the item clicked
 
         # Get the corresponding email content (subject, sender, body)
-        subject, sender, email_content = y[index]  # Use the index directly without subtracting 1
+        print(y[index])
+        subject, sender, email_content, star_stats = y[index]  # Use the index directly without subtracting 1
         zz[0] = y[index]
         print(zz[0])
         print(star_list)
-        if zz[0] not in star_list:
-            self.star_status = False
-            self.update_star_icon()
-            print("false")
-        else:
-            self.star_status = True
-            self.update_star_icon()
-            print("true")
+        
         # Display the email content in the right QWidget
         self.subjectLabel.setText(f"Subject: {subject}")
         self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")

@@ -78,7 +78,7 @@ for i in range(numOfMessages, numOfMessages - 100, -1):
                 # Extract the body content
                 body = extract_body(msg)
                 if body:
-                    y.append((subject, From, body))  # Store subject, sender, and body as a tuple
+                    y.append([subject, From, body, False])  # Store subject, sender, and body as a tuple
     except TypeError:
         pass
 imap.close()
