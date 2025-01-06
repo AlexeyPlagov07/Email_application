@@ -21,6 +21,8 @@ class Ui_MainWindow(QMainWindow):
         self.current_email_index = None  # Store the index of the currently selected email
 
     def setupUi(self, MainWindow):
+        self.index = 0
+        
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1000, 625)
         MainWindow.setStyleSheet("background-color: #f0f0f0;")
@@ -56,22 +58,43 @@ class Ui_MainWindow(QMainWindow):
         central_widget = QtWidgets.QWidget(MainWindow)
         MainWindow.setCentralWidget(central_widget)
         
+        self.css_on_click = ("QPushButton"
+                    "{"
+                    f"background-color : lightblue"
+                    "}")
+
+        self.css_other = ("QPushButton::hover"
+                             "{"
+                             "background-color : lightgray;"
+                             "}"
+                             "QPushButton::pressed"
+                             "{"
+                             "background-color : lightblue;"
+                             "}"
+                             )
+
+        
+
+        # Compose Button
+        self.composeButton = QtWidgets.QPushButton("Compose", central_widget)
+        self.composeButton.move(0, 0)
+        self.composeButton.resize(200, 60)
+        self.composeButton.setStyleSheet(self.css_other)
         # Inbox button
-        inboxButton = QtWidgets.QPushButton("Inbox", central_widget)
-        inboxButton.move(0, 0)
-        inboxButton.resize(200, 60)
-        inboxButton.clicked.connect(self.inbox_return)
+        self.inboxButton = QtWidgets.QPushButton("Inbox", central_widget)
+        self.inboxButton.move(0, 60)
+        self.inboxButton.resize(200, 60)
+        self.inboxButton.clicked.connect(self.inbox_return)
+        self.inboxButton.setStyleSheet(self.css_other)
+        
         
         # Starred button
         self.starButton = QtWidgets.QPushButton("Starred", central_widget)
-        self.starButton.move(0, 60)
+        self.starButton.move(0, 120)
         self.starButton.resize(200, 60)
         self.starButton.clicked.connect(self.show_starred_page)
-
-        # Other buttons (Snoozed, Sent, etc.)
-        snoozedButton = QtWidgets.QPushButton("Snoozed", central_widget)
-        snoozedButton.move(0, 120)
-        snoozedButton.resize(200, 60)
+        self.starButton.setStyleSheet(self.css_other)
+        
         
         sentButton = QtWidgets.QPushButton("Sent", central_widget)
         sentButton.move(0, 180)
@@ -100,6 +123,9 @@ class Ui_MainWindow(QMainWindow):
         trashButton = QtWidgets.QPushButton("Trash", central_widget)
         trashButton.move(0, 540)
         trashButton.resize(200, 60)
+
+        self.change_highlights(self.index)
+        
 
         # Left QListWidget for subjects and senders
         self.listWidget = QtWidgets.QListWidget(central_widget)
@@ -168,6 +194,24 @@ class Ui_MainWindow(QMainWindow):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+    def change_highlights(self, index):
+        if index == 0:
+            self.inboxButton.setStyleSheet(self.css_on_click)
+            self.starButton.setStyleSheet(self.css_other)
+            self.composeButton.setStyleSheet(self.css_other)
+        elif index == 2:
+            self.starButton.setStyleSheet(self.css_on_click)
+            self.inboxButton.setStyleSheet(self.css_other)
+            self.composeButton.setStyleSheet(self.css_other)
+        elif index == 3:
+            self.composeButton.setStyleSheet(self.css_on_click)
+            self.inboxButton.setStyleSheet(self.css_other)
+            self.starButton.setStyleSheet(self.css_other)
+        else:
+            self.inboxButton.setStyleSheet(self.css_other)
+            self.starButton.setStyleSheet(self.css_other)
+            self.composeButton.setStyleSheet(self.css_other)
+        
         
     def change_star(self):
         if self.current_email_index is not None:
@@ -198,6 +242,7 @@ class Ui_MainWindow(QMainWindow):
     def inbox_return(self):
         self.index = 0
         self.stacked_layout.setCurrentIndex(self.index)
+        self.change_highlights(self.index)
 
     def populate_starred_list(self):
         self.listWidget_star.clear()  # Clear the list before repopulating
@@ -216,8 +261,9 @@ class Ui_MainWindow(QMainWindow):
         self.index = 2
         self.populate_starred_list()
         self.stacked_layout.setCurrentIndex(self.index)  # Switch to the Starred List
-
+        self.change_highlights(self.index)
     def on_item_clicked(self, item):
+        
         index11 = self.listWidget.row(item)  
         self.current_email_index = index11  
 
