@@ -1,4 +1,5 @@
 import IMAP4_prot
+import sendMail
 import os
 import webbrowser
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -7,6 +8,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 os.system('python IMAP4_prot.py')
+os.system('python sendMail.py')
 y = IMAP4_prot.return_y()
 z = IMAP4_prot.return_z()
 
@@ -80,6 +82,7 @@ class Ui_MainWindow(QMainWindow):
         self.composeButton.move(0, 0)
         self.composeButton.resize(200, 60)
         self.composeButton.setStyleSheet(self.css_other)
+        self.composeButton.clicked.connect(self.compose_box)
         # Inbox button
         self.inboxButton = QtWidgets.QPushButton("Inbox", central_widget)
         self.inboxButton.move(0, 60)
@@ -148,6 +151,51 @@ class Ui_MainWindow(QMainWindow):
         self.listWidget_star.itemClicked.connect(self.on_item_clicked_star)
         self.listWidget_star.resize(800, 600)
 
+        # QWidget for the composition box
+        self.composeWidget = QtWidgets.QWidget(central_widget)
+        self.composeWidget.setGeometry(QtCore.QRect(220, 0, 760, 580))
+
+        self.composeLayout = QtWidgets.QVBoxLayout(self.composeWidget)
+        
+        self.composeToLabel = QtWidgets.QLabel("To:", self.composeWidget)
+        self.composeToLabel.setGeometry(QtCore.QRect(0,0,50,30))
+        
+        self.ToCompose = QtWidgets.QLineEdit(self.composeWidget)
+        self.ToCompose.setGeometry(QtCore.QRect(75,0,200,30))
+        self.ToCompose.setObjectName("subjectCompose")
+        
+        
+        self.composeSubjectLabel = QtWidgets.QLabel("Subject:", self.composeWidget)
+        self.composeSubjectLabel.setGeometry(QtCore.QRect(0,30,50,30))
+        
+        self.subjectCompose = QtWidgets.QLineEdit(self.composeWidget)
+        self.subjectCompose.setGeometry(QtCore.QRect(75,30,200,30))
+        self.subjectCompose.setObjectName("subjectCompose")
+
+
+
+
+        self.listWidget_compose = QtWidgets.QTextEdit(self.composeWidget)
+        self.listWidget_compose.setGeometry(QtCore.QRect(0, 80, 740, 540))
+        self.listWidget_compose.setObjectName("listWidget_Compose")
+        self.listWidget_compose.resize(740, 450)
+
+        # Apply styling to the QTextEdit to add outline and border on focus
+        self.listWidget_compose.setStyleSheet("""
+            QTextEdit {
+                border: 2px solid #000000; 
+                border-radius: 5px;          
+                padding: 10px;               
+            }
+        """)
+
+        self.sendButton = QtWidgets.QPushButton("Send", self.composeWidget)
+        self.sendButton.clicked.connect(self.send_mail)
+        self.sendButton.setVisible(False)
+        self.sendButton.setGeometry(QtCore.QRect(300, 550, 100, 30))
+        
+        
+        
         # Back Button (hidden initially)
         self.backButton = QtWidgets.QPushButton("Back", self.emailContentWidget)
         self.backButton.clicked.connect(self.show_email_list)
@@ -188,6 +236,7 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout.addWidget(self.listWidget)
         self.stacked_layout.addWidget(self.emailContentWidget)
         self.stacked_layout.addWidget(self.listWidget_star)
+        self.stacked_layout.addWidget(self.composeWidget)
 
         # Populate the left list with subject and sender
         self.populate_left_list()
@@ -243,7 +292,12 @@ class Ui_MainWindow(QMainWindow):
         self.index = 0
         self.stacked_layout.setCurrentIndex(self.index)
         self.change_highlights(self.index)
-
+    
+    def compose_box(self):
+        self.index = 3
+        self.stacked_layout.setCurrentIndex(self.index)
+        self.change_highlights(self.index)
+        self.sendButton.setVisible(True)
     def populate_starred_list(self):
         self.listWidget_star.clear()  # Clear the list before repopulating
         _translate = QtCore.QCoreApplication.translate
@@ -293,6 +347,25 @@ class Ui_MainWindow(QMainWindow):
         self.starredButton.setVisible(True)
 
         self.stacked_layout.setCurrentIndex(1)
+    
+    def send_mail(self):
+        sendTo = self.ToCompose.text()
+        sendSubject = self.subjectCompose.text()
+        sendContent = self.listWidget_compose.toPlainText()
+        print("TO:", sendTo)
+        print("Subject:", sendSubject)
+        print("Content:", sendContent)
+
+        message = f"""\
+        Subject: {sendSubject}
+
+        {sendContent}"""
+        sendMail.sendEmail(sendTo, message)
+
+        self.ToCompose.clear()
+        self.subjectCompose.clear()
+        self.listWidget_compose.clear()
+
 
     def show_email_list(self):
         self.backButton.setVisible(False)
