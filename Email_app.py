@@ -1,16 +1,17 @@
 import IMAP4_prot
 import sendMail
 import os
-import webbrowser
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QUrl
 from PyQt5.QtWidgets import QMenu, QAction, QMainWindow
+from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+import os
 os.system('python IMAP4_prot.py')
 os.system('python sendMail.py')
 y = IMAP4_prot.return_y()
-z = IMAP4_prot.return_z()
 
 star_list = []  # To hold starred emails
 
@@ -75,21 +76,19 @@ class Ui_MainWindow(QMainWindow):
                              "}"
                              )
 
-        
-
         # Compose Button
         self.composeButton = QtWidgets.QPushButton("Compose", central_widget)
         self.composeButton.move(0, 0)
         self.composeButton.resize(200, 60)
         self.composeButton.setStyleSheet(self.css_other)
         self.composeButton.clicked.connect(self.compose_box)
+        
         # Inbox button
         self.inboxButton = QtWidgets.QPushButton("Inbox", central_widget)
         self.inboxButton.move(0, 60)
         self.inboxButton.resize(200, 60)
         self.inboxButton.clicked.connect(self.inbox_return)
         self.inboxButton.setStyleSheet(self.css_other)
-        
         
         # Starred button
         self.starButton = QtWidgets.QPushButton("Starred", central_widget)
@@ -98,38 +97,43 @@ class Ui_MainWindow(QMainWindow):
         self.starButton.clicked.connect(self.show_starred_page)
         self.starButton.setStyleSheet(self.css_other)
         
-        
+        # Sent button
         sentButton = QtWidgets.QPushButton("Sent", central_widget)
         sentButton.move(0, 180)
         sentButton.resize(200, 60)
 
+        # Drafts button
         draftButton = QtWidgets.QPushButton("Drafts", central_widget)
         draftButton.move(0, 240)
         draftButton.resize(200, 60)
 
+        # Important button
         importantButton = QtWidgets.QPushButton("Important", central_widget)
         importantButton.move(0, 300)
         importantButton.resize(200, 60)
 
+        # Scheduled button
         scheduledButton = QtWidgets.QPushButton("Scheduled", central_widget)
         scheduledButton.move(0, 360)
         scheduledButton.resize(200, 60)
 
+        # All Mail button
         allButton = QtWidgets.QPushButton("All Mail", central_widget)
         allButton.move(0, 420)
         allButton.resize(200, 60)
 
+        # Spam button
         spamButton = QtWidgets.QPushButton("Spam", central_widget)
         spamButton.move(0, 480)
         spamButton.resize(200, 60)
 
+        # Trash button
         trashButton = QtWidgets.QPushButton("Trash", central_widget)
         trashButton.move(0, 540)
         trashButton.resize(200, 60)
 
         self.change_highlights(self.index)
         
-
         # Left QListWidget for subjects and senders
         self.listWidget = QtWidgets.QListWidget(central_widget)
         self.listWidget.setGeometry(QtCore.QRect(200, 0, 100, 100))
@@ -143,6 +147,8 @@ class Ui_MainWindow(QMainWindow):
         
         # Layout for email content display
         self.emailContentLayout = QtWidgets.QVBoxLayout(self.emailContentWidget)
+
+        # Add a QWebEngineView to render HTML content on the right side
 
         # QWidget for Starred Email subjects and senders
         self.listWidget_star = QtWidgets.QListWidget(central_widget)
@@ -164,7 +170,6 @@ class Ui_MainWindow(QMainWindow):
         self.ToCompose.setGeometry(QtCore.QRect(75,0,200,30))
         self.ToCompose.setObjectName("subjectCompose")
         
-        
         self.composeSubjectLabel = QtWidgets.QLabel("Subject:", self.composeWidget)
         self.composeSubjectLabel.setGeometry(QtCore.QRect(0,30,50,30))
         
@@ -172,29 +177,15 @@ class Ui_MainWindow(QMainWindow):
         self.subjectCompose.setGeometry(QtCore.QRect(75,30,200,30))
         self.subjectCompose.setObjectName("subjectCompose")
 
-
-
-
         self.listWidget_compose = QtWidgets.QTextEdit(self.composeWidget)
         self.listWidget_compose.setGeometry(QtCore.QRect(0, 80, 740, 540))
         self.listWidget_compose.setObjectName("listWidget_Compose")
         self.listWidget_compose.resize(740, 450)
 
-        # Apply styling to the QTextEdit to add outline and border on focus
-        self.listWidget_compose.setStyleSheet("""
-            QTextEdit {
-                border: 2px solid #000000; 
-                border-radius: 5px;          
-                padding: 10px;               
-            }
-        """)
-
         self.sendButton = QtWidgets.QPushButton("Send", self.composeWidget)
         self.sendButton.clicked.connect(self.send_mail)
         self.sendButton.setVisible(False)
         self.sendButton.setGeometry(QtCore.QRect(300, 550, 100, 30))
-        
-        
         
         # Back Button (hidden initially)
         self.backButton = QtWidgets.QPushButton("Back", self.emailContentWidget)
@@ -243,6 +234,7 @@ class Ui_MainWindow(QMainWindow):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
     def change_highlights(self, index):
         if index == 0:
             self.inboxButton.setStyleSheet(self.css_on_click)
@@ -260,8 +252,7 @@ class Ui_MainWindow(QMainWindow):
             self.inboxButton.setStyleSheet(self.css_other)
             self.starButton.setStyleSheet(self.css_other)
             self.composeButton.setStyleSheet(self.css_other)
-        
-        
+
     def change_star(self):
         if self.current_email_index is not None:
             y[self.current_email_index][3] = not y[self.current_email_index][3]  # Toggle star status
@@ -283,9 +274,13 @@ class Ui_MainWindow(QMainWindow):
 
     def populate_left_list(self):
         _translate = QtCore.QCoreApplication.translate
-        for i in range(len(z)):
+        for i in range(len(y)):
             item = QtWidgets.QListWidgetItem()
-            item.setText(_translate("MainWindow", f"{z[i][0]}\n{z[i][1]}"))
+            if y[i][4] == 0:
+                spam_res = "(SPAM RISK)"
+            else:
+                spam_res = ""
+            item.setText(_translate("MainWindow", f"{y[i][0]}         {spam_res}\n{y[i][1]}"))
             self.listWidget.addItem(item)
 
     def inbox_return(self):
@@ -298,6 +293,7 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout.setCurrentIndex(self.index)
         self.change_highlights(self.index)
         self.sendButton.setVisible(True)
+
     def populate_starred_list(self):
         self.listWidget_star.clear()  # Clear the list before repopulating
         _translate = QtCore.QCoreApplication.translate
@@ -306,7 +302,11 @@ class Ui_MainWindow(QMainWindow):
         for item_data in star_list:
             item = QtWidgets.QListWidgetItem()
             try:
-                item.setText(_translate("MainWindow", f"{item_data[0]}\n{item_data[1]}"))
+                if item_data[4] == 0:
+                    spam_res = "(SPAM RISK)"
+                else:
+                    spam_res = ""
+                item.setText(_translate("MainWindow", f"{item_data[0]}      {spam_res}\n{item_data[1]}"))
             except IndexError:
                 item.clear()
             self.listWidget_star.addItem(item)
@@ -316,16 +316,19 @@ class Ui_MainWindow(QMainWindow):
         self.populate_starred_list()
         self.stacked_layout.setCurrentIndex(self.index)  # Switch to the Starred List
         self.change_highlights(self.index)
+
     def on_item_clicked(self, item):
-        
         index11 = self.listWidget.row(item)  
         self.current_email_index = index11  
-
-        subject, sender, email_content, star_stats = y[index11]
-
+        subject, sender, email_content, star_stats, spam_stats = y[index11]
+        if spam_stats == 0:
+            spam_res = "(SPAM RISK)"
+        else:
+            spam_res = ""
         self.update_star_icon()
-        self.subjectLabel.setText(f"Subject: {subject}")
+        self.subjectLabel.setText(f"Subject: {subject}     {spam_res}")
         self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
+        
         
         self.backButton.setVisible(True)
         self.starredButton.setVisible(True)
@@ -337,11 +340,12 @@ class Ui_MainWindow(QMainWindow):
         index_starred = self.listWidget_star.row(item)
         self.current_email_index = y.index(star_list[index_starred])  # Get the original index of the starred email
 
-        subject, sender, email_content, star_stats = y[self.current_email_index]
+        subject, sender, email_content, star_statsm, spam_stats = y[self.current_email_index]
 
         self.update_star_icon()
         self.subjectLabel.setText(f"Subject: {subject}")
         self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
+        
         
         self.backButton.setVisible(True)
         self.starredButton.setVisible(True)
@@ -371,11 +375,11 @@ class Ui_MainWindow(QMainWindow):
         self.backButton.setVisible(False)
         self.stacked_layout.setCurrentIndex(self.index)
         self.starredButton.setVisible(False)
-        self.update_star_icon()
+        self.change_highlights(self.index)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Email Viewer"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
 
 # Run the application
 if __name__ == "__main__":

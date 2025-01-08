@@ -1,89 +1,91 @@
-import imaplib, email
-import os
+import imaplib
+import email
 from email.header import decode_header
+import spam_detect
 
-# Initialize IMAP connection
-imap = imaplib.IMAP4_SSL("imap.gmail.com")
-imap.login('alexeyplagov@gmail.com', 'lmas fwyf pgij mlzu')
+y = []
 
-# Select the inbox
-status, messages = imap.select("INBOX")
-numOfMessages = int(messages[0])
+# Connect to the server
+mail = imaplib.IMAP4_SSL("imap.gmail.com")
 
-z = []  # List for storing subject and sender info
-y = []  # List for storing email body content
+# Login to your account
+username = "alexeyplagov@gmail.com"
+password = "lmas fwyf pgij mlzu"
+mail.login(username, password)
 
-def clean(text):
-    # Clean text for creating a folder
-    return "".join(c if c.isalnum() else "_" for c in text)
+# Select the mailbox you want to use (in this case, the inbox)
+mail.select("inbox")
 
-def obtain_header(msg):
-    # Decode the email subject
-    subject, encoding = decode_header(msg["Subject"])[0]
-    if isinstance(subject, bytes):
-        subject = subject.decode(encoding)
+# Search for all emails in the mailbox
+status, messages = mail.search(None, "ALL")
 
-    # Decode email sender
-    From, encoding = decode_header(msg.get("From"))[0]
-    if isinstance(From, bytes):
-        From = From.decode(encoding)
+# Convert messages to a list of email IDs
+email_ids = messages[0].split()
 
-    # Store subject and sender in z list
-    z.append([subject, From])
-    return subject, From
+# Get the last 50 email IDs (if there are less than 50, it'll fetch all)
+last_50_email_ids = email_ids[-200:]
 
-def download_attachment(part):
-    # Download email attachment
-    filename = part.get_filename()
-    if filename:
-        folder_name = clean(subject)
-        if not os.path.isdir(folder_name):
-            os.mkdir(folder_name)
-            filepath = os.path.join(folder_name, filename)
-            open(filepath, "wb").write(part.get_payload(decode=True))
+# Iterate through each of the last 50 emails
+try:
+    for email_id in last_50_email_ids:
+        # Fetch the email by ID
+        status, msg_data = mail.fetch(email_id, "(RFC822)")
 
-def extract_body(msg):
-    # Function to extract the email body (handling both text/plain and text/html)
-    body = ""
-    if msg.is_multipart():
-        for part in msg.walk():
-            content_type = part.get_content_type()
-            content_disposition = str(part.get("Content-Disposition"))
-            
-            # If the part is plain text or html, extract the body
-            try:
-                if content_type == "text/plain" and "attachment" not in content_disposition:
-                    body = part.get_payload(decode=True).decode()
-                    break  # We stop once we find the plain text body
-                elif content_type == "text/html" and "attachment" not in content_disposition:
-                    body = part.get_payload(decode=True).decode()
-                    break  # We stop once we find the html body
-            except:
-                continue
-    else:
-        # For non-multipart emails, directly extract the body
-        body = msg.get_payload(decode=True).decode()
+        # Initialize variables for plain text and HTML
+        plain_text_body = ""
+        html_body = ""
 
-    return body
+        # Get the email content
+        for response_part in msg_data:
+            if isinstance(response_part, tuple):
+                msg = email.message_from_bytes(response_part[1])
+                subject, encoding = decode_header(msg["Subject"])[0]
+                if isinstance(subject, bytes):  
+                    subject = subject.decode(encoding if encoding else "utf-8")
+                from_ = msg.get("From")
 
-# Fetch emails and store details
-for i in range(numOfMessages, numOfMessages - 100, -1):
-    try:
-        res, msg = imap.fetch(str(i), "(RFC822)")  # Fetch the email using its ID
-        for response in msg:
-            if isinstance(response, tuple):
-                msg = email.message_from_bytes(response[1])
-                subject, From = obtain_header(msg)
-                
-                # Extract the body content
-                body = extract_body(msg)
-                if body:
-                    y.append([subject, From, body, False])  # Store subject, sender, and body as a tuple
-    except TypeError:
-        pass
-imap.close()
+                # If the email message is multipart
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        content_type = part.get_content_type()
+                        content_disposition = str(part.get("Content-Disposition"))
+
+                        # Check if the part is plain text
+                        if content_type == "text/plain" and "attachment" not in content_disposition:
+                            try:
+                                # Extract plain text body
+                                plain_text_body = part.get_payload(decode=True).decode()
+                            except:
+                                pass
+                        # Check if the part is HTML
+                        elif content_type == "text/html" and "attachment" not in content_disposition:
+                            try:
+                                # Extract HTML body
+                                html_body = part.get_payload(decode=True).decode()
+                            except:
+                                pass
+                else:
+                    # If the email is not multipart, extract the body
+                    content_type = msg.get_content_type()
+
+                    # If the content type is plain text, decode the body
+                    if content_type == "text/plain":
+                        plain_text_body = msg.get_payload(decode=True).decode()
+                    # If the content type is HTML, decode the body
+                    elif content_type == "text/html":
+                        html_body = msg.get_payload(decode=True).decode()
+
+                # Use the spam detection function on the plain text body
+                spam_return = spam_detect.test_data(plain_text_body)
+
+                # Append the email data (subject, sender, plain text body, HTML body, spam result) to the list
+                y.append([subject, from_, plain_text_body, False, spam_return])
+except TypeError:
+    pass
+
+# Close the connection and logout
+mail.close()
+mail.logout()
 
 def return_y():
     return y
-def return_z():
-    return z
