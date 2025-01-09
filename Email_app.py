@@ -14,7 +14,7 @@ os.system('python sendMail.py')
 y = IMAP4_prot.return_y()
 
 star_list = []  # To hold starred emails
-
+spam_list = []
 class Ui_MainWindow(QMainWindow):
     
     def __init__(self):
@@ -123,9 +123,11 @@ class Ui_MainWindow(QMainWindow):
         allButton.resize(200, 60)
 
         # Spam button
-        spamButton = QtWidgets.QPushButton("Spam", central_widget)
-        spamButton.move(0, 480)
-        spamButton.resize(200, 60)
+        self.spamButton = QtWidgets.QPushButton("Spam", central_widget)
+        self.spamButton.move(0, 480)
+        self.spamButton.resize(200, 60)
+        self.spamButton.clicked.connect(self.show_spam_page)
+        self.spamButton.setStyleSheet(self.css_other)
 
         # Trash button
         trashButton = QtWidgets.QPushButton("Trash", central_widget)
@@ -148,8 +150,11 @@ class Ui_MainWindow(QMainWindow):
         # Layout for email content display
         self.emailContentLayout = QtWidgets.QVBoxLayout(self.emailContentWidget)
 
-        # Add a QWebEngineView to render HTML content on the right side
-
+        self.listWidget_spam = QtWidgets.QListWidget(central_widget)
+        self.listWidget_spam.setGeometry(QtCore.QRect(200, 0, 100, 100))
+        self.listWidget_spam.setObjectName("listWidget_spam")
+        self.listWidget_spam.itemClicked.connect(self.on_item_clicked_spam)
+        self.listWidget_spam.resize(800, 600)
         # QWidget for Starred Email subjects and senders
         self.listWidget_star = QtWidgets.QListWidget(central_widget)
         self.listWidget_star.setGeometry(QtCore.QRect(200, 0, 100, 100))
@@ -228,6 +233,7 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout.addWidget(self.emailContentWidget)
         self.stacked_layout.addWidget(self.listWidget_star)
         self.stacked_layout.addWidget(self.composeWidget)
+        self.stacked_layout.addWidget(self.listWidget_spam)
 
         # Populate the left list with subject and sender
         self.populate_left_list()
@@ -240,18 +246,27 @@ class Ui_MainWindow(QMainWindow):
             self.inboxButton.setStyleSheet(self.css_on_click)
             self.starButton.setStyleSheet(self.css_other)
             self.composeButton.setStyleSheet(self.css_other)
+            self.spamButton.setStyleSheet(self.css_other)
         elif index == 2:
             self.starButton.setStyleSheet(self.css_on_click)
             self.inboxButton.setStyleSheet(self.css_other)
             self.composeButton.setStyleSheet(self.css_other)
+            self.spamButton.setStyleSheet(self.css_other)
         elif index == 3:
             self.composeButton.setStyleSheet(self.css_on_click)
             self.inboxButton.setStyleSheet(self.css_other)
             self.starButton.setStyleSheet(self.css_other)
+            self.spamButton.setStyleSheet(self.css_other)
+        elif index == 4:
+            self.composeButton.setStyleSheet(self.css_other)
+            self.inboxButton.setStyleSheet(self.css_other)
+            self.starButton.setStyleSheet(self.css_other)
+            self.spamButton.setStyleSheet(self.css_on_click)
         else:
             self.inboxButton.setStyleSheet(self.css_other)
             self.starButton.setStyleSheet(self.css_other)
             self.composeButton.setStyleSheet(self.css_other)
+            self.spamButton.setStyleSheet(self.css_other)
 
     def change_star(self):
         if self.current_email_index is not None:
@@ -293,6 +308,9 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout.setCurrentIndex(self.index)
         self.change_highlights(self.index)
         self.sendButton.setVisible(True)
+    
+    
+
 
     def populate_starred_list(self):
         self.listWidget_star.clear()  # Clear the list before repopulating
@@ -311,10 +329,37 @@ class Ui_MainWindow(QMainWindow):
                 item.clear()
             self.listWidget_star.addItem(item)
 
+
+    def populate_spam_list(self):
+        self.listWidget_spam.clear()  # Clear the list before repopulating
+        _translate = QtCore.QCoreApplication.translate
+    
+        # Iterate over starred emails
+        for item_data in y:
+            item = QtWidgets.QListWidgetItem()
+            try:
+                if item_data[4] == 0:
+                    spam_list.append(item_data)
+                    spam_res = "(SPAM RISK)"
+                    item.setText(_translate("MainWindow", f"{item_data[0]}      {spam_res}\n{item_data[1]}"))
+                else:
+                    continue
+                
+            except IndexError:
+                item.clear()
+            self.listWidget_spam.addItem(item)
+    
+
     def show_starred_page(self):
         self.index = 2
         self.populate_starred_list()
         self.stacked_layout.setCurrentIndex(self.index)  # Switch to the Starred List
+        self.change_highlights(self.index)
+    
+    def show_spam_page(self):
+        self.index = 4
+        self.populate_spam_list()
+        self.stacked_layout.setCurrentIndex(self.index)
         self.change_highlights(self.index)
 
     def on_item_clicked(self, item):
@@ -335,10 +380,29 @@ class Ui_MainWindow(QMainWindow):
 
         self.stacked_layout.setCurrentIndex(1)
 
+    
+
+
     def on_item_clicked_star(self, item):
         # Get the index from the starred list (listWidget_star)
         index_starred = self.listWidget_star.row(item)
         self.current_email_index = y.index(star_list[index_starred])  # Get the original index of the starred email
+
+        subject, sender, email_content, star_statsm, spam_stats = y[self.current_email_index]
+
+        self.update_star_icon()
+        self.subjectLabel.setText(f"Subject: {subject}")
+        self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
+        
+        
+        self.backButton.setVisible(True)
+        self.starredButton.setVisible(True)
+
+        self.stacked_layout.setCurrentIndex(1)
+    def on_item_clicked_spam(self, item):
+        # Get the index from the starred list (listWidget_star)
+        index_spam = self.listWidget_spam.row(item)
+        self.current_email_index = y.index(spam_list[index_spam])  # Get the original index of the starred email
 
         subject, sender, email_content, star_statsm, spam_stats = y[self.current_email_index]
 
