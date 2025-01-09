@@ -15,6 +15,7 @@ y = IMAP4_prot.return_y()
 
 star_list = []  # To hold starred emails
 spam_list = []
+
 class Ui_MainWindow(QMainWindow):
     
     def __init__(self):
@@ -133,6 +134,7 @@ class Ui_MainWindow(QMainWindow):
         trashButton = QtWidgets.QPushButton("Trash", central_widget)
         trashButton.move(0, 540)
         trashButton.resize(200, 60)
+        self.button_list = [self.inboxButton, 0, self.starButton, self.composeButton, self.spamButton, sentButton, draftButton, importantButton, scheduledButton, allButton]
 
         self.change_highlights(self.index)
         
@@ -242,31 +244,15 @@ class Ui_MainWindow(QMainWindow):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def change_highlights(self, index):
-        if index == 0:
-            self.inboxButton.setStyleSheet(self.css_on_click)
-            self.starButton.setStyleSheet(self.css_other)
-            self.composeButton.setStyleSheet(self.css_other)
-            self.spamButton.setStyleSheet(self.css_other)
-        elif index == 2:
-            self.starButton.setStyleSheet(self.css_on_click)
-            self.inboxButton.setStyleSheet(self.css_other)
-            self.composeButton.setStyleSheet(self.css_other)
-            self.spamButton.setStyleSheet(self.css_other)
-        elif index == 3:
-            self.composeButton.setStyleSheet(self.css_on_click)
-            self.inboxButton.setStyleSheet(self.css_other)
-            self.starButton.setStyleSheet(self.css_other)
-            self.spamButton.setStyleSheet(self.css_other)
-        elif index == 4:
-            self.composeButton.setStyleSheet(self.css_other)
-            self.inboxButton.setStyleSheet(self.css_other)
-            self.starButton.setStyleSheet(self.css_other)
-            self.spamButton.setStyleSheet(self.css_on_click)
+        if index != 1:
+            temp_item = self.button_list[index]
+            temp_item.setStyleSheet(self.css_on_click)
         else:
-            self.inboxButton.setStyleSheet(self.css_other)
-            self.starButton.setStyleSheet(self.css_other)
-            self.composeButton.setStyleSheet(self.css_other)
-            self.spamButton.setStyleSheet(self.css_other)
+            pass
+        for i in self.button_list:
+            if i != self.button_list[index] and i != self.button_list[1]:
+                i.setStyleSheet(self.css_other)
+
 
     def change_star(self):
         if self.current_email_index is not None:
