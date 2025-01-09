@@ -15,6 +15,7 @@ y = IMAP4_prot.return_y()
 
 star_list = []  # To hold starred emails
 spam_list = []
+trash_list = []
 
 class Ui_MainWindow(QMainWindow):
     
@@ -134,7 +135,10 @@ class Ui_MainWindow(QMainWindow):
         trashButton = QtWidgets.QPushButton("Trash", central_widget)
         trashButton.move(0, 540)
         trashButton.resize(200, 60)
-        self.button_list = [self.inboxButton, 0, self.starButton, self.composeButton, self.spamButton, sentButton, draftButton, importantButton, scheduledButton, allButton]
+        trashButton.clicked.connect(self.show_trash_page)
+        trashButton.setStyleSheet(self.css_other)
+        
+        self.button_list = [self.inboxButton, 0, self.starButton, self.composeButton, self.spamButton, trashButton, sentButton, draftButton, importantButton, scheduledButton, allButton]
 
         self.change_highlights(self.index)
         
@@ -163,6 +167,13 @@ class Ui_MainWindow(QMainWindow):
         self.listWidget_star.setObjectName("listWidget_star")
         self.listWidget_star.itemClicked.connect(self.on_item_clicked_star)
         self.listWidget_star.resize(800, 600)
+
+
+        self.listWidget_trash = QtWidgets.QListWidget(central_widget)
+        self.listWidget_trash.setGeometry(QtCore.QRect(200, 0, 100, 100))
+        self.listWidget_trash.setObjectName("listWidget_trash")
+        self.listWidget_trash.itemClicked.connect(self.on_item_clicked_trash)
+        self.listWidget_trash.resize(800, 600)
 
         # QWidget for the composition box
         self.composeWidget = QtWidgets.QWidget(central_widget)
@@ -208,6 +219,13 @@ class Ui_MainWindow(QMainWindow):
         self.starredButton.move(100, 0)
         self.update_star_icon()
 
+
+        self.trashButton = QtWidgets.QPushButton("Trash", self.emailContentWidget)
+        self.trashButton.clicked.connect(self.trash_email)
+        self.trashButton.setVisible(False)
+        self.trashButton.move(200,0)
+
+
         # Scroll Area for email content
         self.scrollArea = QtWidgets.QScrollArea(self.emailContentWidget)
         self.scrollArea.setWidgetResizable(True)  
@@ -236,6 +254,8 @@ class Ui_MainWindow(QMainWindow):
         self.stacked_layout.addWidget(self.listWidget_star)
         self.stacked_layout.addWidget(self.composeWidget)
         self.stacked_layout.addWidget(self.listWidget_spam)
+        self.stacked_layout.addWidget(self.listWidget_trash)
+
 
         # Populate the left list with subject and sender
         self.populate_left_list()
@@ -274,6 +294,7 @@ class Ui_MainWindow(QMainWindow):
                 self.starredButton.setIcon(QIcon("images/star_off.png"))
 
     def populate_left_list(self):
+        self.listWidget.clear()
         _translate = QtCore.QCoreApplication.translate
         for i in range(len(y)):
             item = QtWidgets.QListWidgetItem()
@@ -288,6 +309,9 @@ class Ui_MainWindow(QMainWindow):
         self.index = 0
         self.stacked_layout.setCurrentIndex(self.index)
         self.change_highlights(self.index)
+        self.populate_left_list()
+        self.populate_spam_list()
+        self.populate_starred_list()
     
     def compose_box(self):
         self.index = 3
@@ -295,6 +319,7 @@ class Ui_MainWindow(QMainWindow):
         self.change_highlights(self.index)
         self.sendButton.setVisible(True)
     
+        
     
 
 
@@ -334,6 +359,24 @@ class Ui_MainWindow(QMainWindow):
             except IndexError:
                 item.clear()
             self.listWidget_spam.addItem(item)
+    def populate_trash_list(self):
+        self.listWidget_trash.clear()  # Clear the list before repopulating
+        _translate = QtCore.QCoreApplication.translate
+
+        # Iterate over the emails in the trash list
+        for item_data in trash_list:
+            item = QtWidgets.QListWidgetItem()
+            try:
+                if item_data[4] == 0:  # Assuming item_data[4] indicates spam status
+                    spam_res = "(SPAM RISK)"
+                else:
+                    spam_res = ""
+                item.setText(_translate("MainWindow", f"{item_data[0]}      {spam_res}\n{item_data[1]}"))
+                self.listWidget_trash.addItem(item)
+            except IndexError:
+                item.clear()
+                self.listWidget_trash.addItem(item)
+
     
 
     def show_starred_page(self):
@@ -341,12 +384,23 @@ class Ui_MainWindow(QMainWindow):
         self.populate_starred_list()
         self.stacked_layout.setCurrentIndex(self.index)  # Switch to the Starred List
         self.change_highlights(self.index)
+        self.populate_left_list()
+        self.populate_spam_list()
+        self.populate_starred_list()
     
     def show_spam_page(self):
         self.index = 4
         self.populate_spam_list()
         self.stacked_layout.setCurrentIndex(self.index)
         self.change_highlights(self.index)
+
+    def show_trash_page(self):
+        self.index = 5
+        self.populate_trash_list()  # Populate the trash list
+        self.stacked_layout.setCurrentIndex(self.index)  # Switch to the Trash List view
+        self.change_highlights(self.index)  # Change the highlight for the trash button
+
+
 
     def on_item_clicked(self, item):
         index11 = self.listWidget.row(item)  
@@ -363,6 +417,7 @@ class Ui_MainWindow(QMainWindow):
         
         self.backButton.setVisible(True)
         self.starredButton.setVisible(True)
+        self.trashButton.setVisible(True)
 
         self.stacked_layout.setCurrentIndex(1)
 
@@ -383,6 +438,7 @@ class Ui_MainWindow(QMainWindow):
         
         self.backButton.setVisible(True)
         self.starredButton.setVisible(True)
+        self.trashButton.setVisible(True)
 
         self.stacked_layout.setCurrentIndex(1)
     def on_item_clicked_spam(self, item):
@@ -401,14 +457,28 @@ class Ui_MainWindow(QMainWindow):
         self.starredButton.setVisible(True)
 
         self.stacked_layout.setCurrentIndex(1)
+    def on_item_clicked_trash(self, item):
+        # Get the index from the starred list (listWidget_star)
+        index_trash = self.listWidget_trash.row(item)
+          # Get the original index of the starred email
+
+        subject, sender, email_content, star_statsm, spam_stats = trash_list[index_trash]
+
+        self.update_star_icon()
+        self.subjectLabel.setText(f"Subject: {subject}")
+        self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
+        
+        
+        self.backButton.setVisible(True)
+        self.starredButton.setVisible(True)
+
+        self.stacked_layout.setCurrentIndex(1)
     
     def send_mail(self):
         sendTo = self.ToCompose.text()
         sendSubject = self.subjectCompose.text()
         sendContent = self.listWidget_compose.toPlainText()
-        print("TO:", sendTo)
-        print("Subject:", sendSubject)
-        print("Content:", sendContent)
+
 
         message = f"""\
         Subject: {sendSubject}
@@ -420,12 +490,36 @@ class Ui_MainWindow(QMainWindow):
         self.subjectCompose.clear()
         self.listWidget_compose.clear()
 
+    def trash_email(self):
+        # First, mark the email as trashed and remove it from star/spam lists
+        email = y[self.current_email_index]
+        if email not in trash_list:
+            trash_list.append(email)
+            if email in star_list:
+                star_list.remove(email)
+            if email in spam_list:
+                spam_list.remove(email)
+        
+            # Remove the email from y (the main email list)
+            y.pop(self.current_email_index)
+    
+        # Debug print to verify lists are updated
+        print("Emails in 'y':", y)
+        print("Starred emails:", star_list)
+        print("Trash emails:", trash_list)
+
+        # Now, populate the trash list
+        self.populate_trash_list()
+
 
     def show_email_list(self):
         self.backButton.setVisible(False)
         self.stacked_layout.setCurrentIndex(self.index)
         self.starredButton.setVisible(False)
         self.change_highlights(self.index)
+        self.populate_left_list()
+        self.populate_starred_list()
+        self.populate_spam_list
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

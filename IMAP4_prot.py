@@ -23,7 +23,7 @@ status, messages = mail.search(None, "ALL")
 email_ids = messages[0].split()
 
 # Get the last 50 email IDs (if there are less than 50, it'll fetch all)
-last_50_email_ids = email_ids[-200:]
+last_50_email_ids = email_ids[-5:]
 
 # Iterate through each of the last 50 emails
 try:
