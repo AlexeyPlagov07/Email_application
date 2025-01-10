@@ -9,8 +9,8 @@ y = []
 mail = imaplib.IMAP4_SSL("imap.gmail.com")
 
 # Login to your account
-username = "alexeyplagov@gmail.com"
-password = "lmas fwyf pgij mlzu"
+username = "ADD EMAIL ADDRESS HERE"
+password = "ADD TEMP PASS HERE"
 mail.login(username, password)
 
 # Select the mailbox you want to use (in this case, the inbox)
