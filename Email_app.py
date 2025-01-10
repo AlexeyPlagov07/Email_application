@@ -225,6 +225,16 @@ class Ui_MainWindow(QMainWindow):
         self.trashButton.setVisible(False)
         self.trashButton.move(200,0)
 
+        self.archiveButton = QtWidgets.QPushButton("Archive", self.emailContentWidget)
+        self.archiveButton.clicked.connect(self.archive_email)
+        self.archiveButton.setVisible(False)
+        self.archiveButton.move(100,0)
+
+        self.recoverButton = QtWidgets.QPushButton("Recover", self.emailContentWidget)
+        self.recoverButton.clicked.connect(self.recover_email)
+        self.recoverButton.setVisible(False)
+        self.recoverButton.move(200,0)
+
 
         # Scroll Area for email content
         self.scrollArea = QtWidgets.QScrollArea(self.emailContentWidget)
@@ -287,12 +297,28 @@ class Ui_MainWindow(QMainWindow):
             self.populate_starred_list()  # Update the starred list view
 
     def update_star_icon(self):
-        if self.current_email_index is not None:
+        if self.current_email_index is not None and 0 <= self.current_email_index < len(y):
             if y[self.current_email_index][3] == True:
                 self.starredButton.setIcon(QIcon("images/star_on.png"))
             else:
                 self.starredButton.setIcon(QIcon("images/star_off.png"))
 
+    def archive_email(self, index):
+        """Deletes the email permanently from the trash list."""
+        email = trash_list[index]
+        trash_list.remove(email)
+        # Optionally, permanently delete from any other data structures (e.g., if you're storing email permanently elsewhere).
+        print(f"Email '{email[0]}' has been archived (deleted permanently).")
+        self.populate_trash_list()  # Re-populate trash list to reflect changes
+
+    def recover_email(self, index):
+        """Moves the email back to the original list y."""
+        email = trash_list[index]
+        trash_list.remove(email)
+        y.append(email)  # Add the email back to the original list
+        print(f"Email '{email[0]}' has been recovered.")
+        self.populate_trash_list()  # Re-populate trash list
+        self.populate_left_list()  # Update the left email list view to reflect changes
     def populate_left_list(self):
         self.listWidget.clear()
         _translate = QtCore.QCoreApplication.translate
@@ -469,9 +495,11 @@ class Ui_MainWindow(QMainWindow):
         self.bodyLabel.setText(f"From: {sender}\n\n{email_content}")
         
         
+        ##############################
+        #set a archive button visible (button permentaly)
+        self.archiveButton.setVisible(True)
+        self.recoverButton.setVisible(True)
         self.backButton.setVisible(True)
-        self.starredButton.setVisible(True)
-
         self.stacked_layout.setCurrentIndex(1)
     
     def send_mail(self):
@@ -516,6 +544,8 @@ class Ui_MainWindow(QMainWindow):
         self.backButton.setVisible(False)
         self.stacked_layout.setCurrentIndex(self.index)
         self.starredButton.setVisible(False)
+        self.archiveButton.setVisible(False)
+        self.recoverButton.setVisible(False)
         self.change_highlights(self.index)
         self.populate_left_list()
         self.populate_starred_list()
